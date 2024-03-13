@@ -53,7 +53,7 @@ export class AdjacencyList {
         this.addNode({ name: `${index}`, value: 0 });
       }
     });
-    //console.log("Nodes", this.nodes);
+
     //loop over tilemap and find each tile's neighbors
     //add edges to the adjacency list
     tilemap.tiles.forEach((tile, index) => {
@@ -64,13 +64,9 @@ export class AdjacencyList {
       if (tilemap.tiles[index + 1] && index % tilemap.cols != tilemap.cols - 1) neighbors.push(index + 1);
       if (tilemap.tiles[index - tilemap.cols]) neighbors.push(index - tilemap.cols);
       if (tilemap.tiles[index + tilemap.cols]) neighbors.push(index + tilemap.cols);
-      //console.log(`index ${index}, neighbors`, neighbors);
 
       //check value for 1
       neighbors.forEach(neighbor => {
-        //@ts-ignore
-        // console.log(tilemap.tiles[neighbor]);
-
         if (tilemap.tiles[neighbor].collider != true) {
           this.addEdge({
             name: `${index}_${neighbor}`,
@@ -81,7 +77,6 @@ export class AdjacencyList {
         }
       });
     });
-    //console.log("Edges", this.edges);
   }
 
   getNodes() {
@@ -210,8 +205,7 @@ export class AdjacencyList {
           }
         }
       }
-      /* console.log("lowestDistanceIndex", lowestDistanceIndex);
-      console.log("resultArray", resultArray); */
+
       current = resultArray[lowestDistanceIndex].node;
       currentEdges = this.getAdjacentEdges(current);
 

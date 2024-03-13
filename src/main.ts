@@ -3,31 +3,23 @@
 
 import "./style.css";
 import { UI } from "@peasy-lib/peasy-ui";
-import { Engine, DisplayMode, TileMap, ImageSource, SpriteSheet, Camera, Vector, Actor, EasingFunctions } from "excalibur";
-import roguelikess from "./assets/roguelike.png";
-import dude from "./assets/dude.png";
+import { Engine, DisplayMode, TileMap, ImageSource, SpriteSheet, Camera, Vector, Actor, EasingFunctions, Loader } from "excalibur";
 import { AdjacencyList, GraphTileMap } from "./graphs";
-
-// import assets and load into Excalibur
-const kennyRougeLikePack = new ImageSource(roguelikess);
-await kennyRougeLikePack.load();
-const rlSS = SpriteSheet.fromImageSource({
-  image: kennyRougeLikePack,
-  grid: { columns: 57, rows: 31, spriteHeight: 16, spriteWidth: 16 },
-  spacing: { margin: { x: 1, y: 1 } },
-});
-
-const plrImage = new ImageSource(dude);
-await plrImage.load();
+import { Resources, rlSS } from "./resourcses";
+import { Tree, tiles } from "./tiledata";
+import { player } from "./player";
 
 // setup Peasy-UI for dom rendering
 // data model
-const model = {
+export const model = {
   hudWidth: 800,
   hudHeight: 600,
   currentTileIndex: 0,
   targetTileIndex: 0,
   movesRemaining: 0,
+  showHUD: false,
+  showWarning: false,
+  warningColor: "white",
 };
 
 // dom template with bindings
@@ -47,28 +39,50 @@ const template = `
         width: \${hudWidth}px;
         height: \${hudHeight}px;
         border: 1px solid black; 
+        pointer-events: none;
+          
+    }
+    hud-flex {
         display: flex;
         justify-content: space-between;
+        gap: 10px;
         pointer-events: none;
-        gap: 10px;   
     }
     #current, #target, #remaining {
         font-size: 30px;
         margin: 5px;
     }
+    #target {
+      color: \${warningColor};
+    }
+    #warning {
+        color: red;
+        width: 100%;
+        text-align: center;
+        font-size: 30px;
+        position: fixed;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        pointer-events: none;
+      }
 </style> 
 <div> 
     <canvas id='cnv'> </canvas> 
     <hud-layer>
-        <div id='current'>Current Tile: \${currentTileIndex} </div>
-        <div id='target'>Target Tile: \${targetTileIndex} </div>
-        <div id='remaining'>Moves Remaining: \${movesRemaining} </div>
+        <hud-flex>
+          <div id='current' \${===showHUD}>Current Tile: \${currentTileIndex} </div>
+          <div id='target' \${===showHUD}>Target Tile: \${targetTileIndex} </div>
+          <div id='remaining' \${===showHUD}>Moves Remaining: \${movesRemaining} </div>
+        </hud-flex>
+        <div id='warning' \${===showWarning}>CLICKING A TREE WILL BE IGNORED</div>
     </hud-layer>
+    
 </div>`;
 await UI.create(document.body, model, template).attached;
 
 //create Excalibur game
-const game = new Engine({
+export const game = new Engine({
   width: 800, // the width of the canvas
   height: 600, // the height of the canvas
   canvasElementId: "cnv", // the DOM canvas element ID, if you are providing your own
@@ -76,159 +90,8 @@ const game = new Engine({
   pixelArt: true,
 });
 
-// for tilemap creation, create tiles with a sprite info and
-// a collider setting for Graph parsing
-class Grass {
-  sprite = [5, 0];
-  collider: boolean = false;
-}
-
-class Tree {
-  sprite = [13, 9];
-  collider: boolean = true;
-}
-
-// create and configure player, and his action buffer
-const playerActionBuffer: any = [];
-let playerActionStatus = "idle"; //"moving"
-
-let player = new Actor({
-  pos: new Vector(8, 8),
-  width: 16,
-  height: 16,
-});
-
-player.graphics.use(plrImage.toSprite());
-
-// post update routine that cycles through action buffer and exectues moves
-player._postupdate = () => {
-  if (playerActionBuffer.length > 0) {
-    if (playerActionStatus == "idle") {
-      playerActionStatus = "moving";
-
-      // monitor player move completion from
-      // game events
-      game.events.on("playerMoveComplete", () => {
-        // this updates the HUD with the next tile data
-        model.currentTileIndex = nextTile;
-        playerActionStatus = "idle";
-      });
-
-      // get next tile off action buffer and moveTo
-      const nextTile = playerActionBuffer.shift();
-      moveToTile(nextTile);
-    }
-  } else {
-    // action buffer empty, reset
-    playerActionStatus = "idle";
-  }
-};
-
-// load tiles array with tiles, doing this separately so that i can
-// a-> use it for Excalibur's tilemap
-// and b-> pass it to Graph for pathfinding
-const tiles = [
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Tree(),
-  new Grass(),
-  new Tree(),
-  new Tree(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Tree(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Tree(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Tree(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Tree(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Tree(),
-  new Grass(),
-  new Tree(),
-  new Tree(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Tree(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Tree(),
-  new Grass(),
-  new Tree(),
-  new Grass(),
-  new Grass(),
-  new Tree(),
-  new Grass(),
-  new Tree(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Tree(),
-  new Grass(),
-  new Tree(),
-  new Tree(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Tree(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-  new Grass(),
-];
+const loader = new Loader();
+for (const resource of Object.values(Resources)) loader.addResource(resource);
 
 // Create a tilemap
 const tilemap = new TileMap({
@@ -265,7 +128,9 @@ let myGraphTileMap: GraphTileMap = {
 myGraph.addTileMap(myGraphTileMap);
 
 // start game, add tilemap, and actor
-await game.start();
+await game.start(loader);
+//show HUD layer, hidden by default
+model.showHUD = true;
 game.add(tilemap);
 game.currentScene.camera.pos = new Vector(80, 80);
 game.currentScene.camera.zoom = 3;
@@ -273,11 +138,22 @@ game.add(player);
 
 // setup click event for each tile
 game.input.pointers.primary.on("down", evt => {
+  // gaurd conditions----------------------------------------
+  // if you click outside of the tilemap, bail
+  // if you click while moving, bail
+  // if you click a tree, warn user and bail
   if (evt.worldPos == undefined) return;
-  if (playerActionStatus == "moving") return;
+  if (player.playerActionStatus == "moving") return;
 
+  //get tile that was clicked
   const tile = game.currentScene.tileMaps[0].getTileByPoint(evt.worldPos);
   if (tile) model.targetTileIndex = tile.x + tile.y * 10;
+
+  // gaurd condition
+  if (tiles[model.targetTileIndex] instanceof Tree) {
+    showWarning();
+    return;
+  }
 
   //get player tile
   const playerTile = game.currentScene.tileMaps[0].getTileByPoint(player.pos);
@@ -287,27 +163,22 @@ game.input.pointers.primary.on("down", evt => {
   if (tile) targetTileIndex = tile.x + tile.y * 10;
   const path = myGraph.shortestPath(myGraph.nodes.get(`${playerTileIndex}`)!, myGraph.nodes.get(`${targetTileIndex}`)!);
 
+  // set the HUD data for moves remaining
   model.movesRemaining = path.length - 1;
+  // don't push the player's current tile, so we start at index 1
   for (let i = 1; i < path.length; i++) {
     const nxtPath = path[i];
-    playerActionBuffer.push(parseInt(nxtPath.name));
+    player.playerActionBuffer.push(parseInt(nxtPath.name));
   }
 });
 
-// this action event is triggered when user clics on tile,
-// it accepts the next 'node' in the graph to move to
-// and moves the player over time, and at end,
-// emits the 'playerMoveComplete' event
-function moveToTile(node: number) {
-  //convert node, which is flat array index into x and y
-  let x = node % 10;
-  let y = Math.floor(node / 10);
-  //get vector between player and tile
-  let target = new Vector(x * 16 + 8, y * 16 + 8);
-  player.actions.easeTo(target, 500, EasingFunctions.EaseInOutCubic);
-  //delay 500 ms and then emit event for end of move
+// Utility function that manages the data model
+// for peasy to flash the warning on the HUD
+function showWarning() {
+  model.showWarning = true;
+  model.warningColor = "red";
   setTimeout(() => {
-    model.movesRemaining--; // this updates HUD with moves remaining data
-    game.events.emit("playerMoveComplete");
-  }, 500);
+    model.showWarning = false;
+    model.warningColor = "white";
+  }, 2000);
 }
