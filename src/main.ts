@@ -4,7 +4,6 @@
 import "./style.css";
 import { UI } from "@peasy-lib/peasy-ui";
 import { Engine, DisplayMode, TileMap, ImageSource, SpriteSheet, Camera, Vector, Actor, EasingFunctions, Loader } from "excalibur";
-//import { AdjacencyList, GraphTileMap } from "./graphs";
 import { ExcaliburGraph, GraphTileMap } from "@excaliburjs/excalibur-graph";
 import { Resources, rlSS } from "./resourcses";
 import { Tree, tiles } from "./tiledata";
