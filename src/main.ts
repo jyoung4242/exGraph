@@ -4,7 +4,8 @@
 import "./style.css";
 import { UI } from "@peasy-lib/peasy-ui";
 import { Engine, DisplayMode, TileMap, ImageSource, SpriteSheet, Camera, Vector, Actor, EasingFunctions, Loader } from "excalibur";
-import { AdjacencyList, GraphTileMap } from "./graphs";
+//import { AdjacencyList, GraphTileMap } from "./graphs";
+import { ExcaliburGraph, GraphTileMap } from "@excaliburjs/excalibur-graph";
 import { Resources, rlSS } from "./resourcses";
 import { Tree, tiles } from "./tiledata";
 import { player } from "./player";
@@ -118,7 +119,7 @@ for (let tile of tilemap.tiles) {
 
 // create graph
 // configure graph tilemap size and pass in tiles
-let myGraph = new AdjacencyList();
+let myGraph = new ExcaliburGraph();
 let myGraphTileMap: GraphTileMap = {
   name: "myGraph",
   tiles: [...tiles],
