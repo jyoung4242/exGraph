@@ -69,6 +69,7 @@ This project is a small 'game' that implements some key ideas and concepts:
 - Loader bringing in Sprites and Spritesheets
 - Click Events on the tilemap
 - Pathfinding model utilizing Dijkstra's Algorithm
+- Pathfinding via A\* Algorithm
 - implements Peasy-UI for a HUD layer above the game that has dynamic data binding
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
