@@ -28,6 +28,9 @@
     <li>
       <a href="#getting-started">Getting Started</a>
     </li>
+    <li>
+      <a href="#demo-ui">Demo UI</a>
+    </li>
     <li><a href="#usage">Usage</a>
       <ul>
         <li><a href="#usage-of-excalibur-concepts">Excalibur Concepts</a>
