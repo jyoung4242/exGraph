@@ -88,6 +88,10 @@ npm install
 npm run dev
 ```
 
+## Demo UI
+
+![alt text](image-1.png)
+
 <!-- USAGE EXAMPLES -->
 
 ## Usage of Excalibur Concepts
