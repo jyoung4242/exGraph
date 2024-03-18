@@ -28,6 +28,7 @@ class Player extends Actor {
 
         // get next tile off action buffer and moveTo
         const nextTile = this.playerActionBuffer.shift();
+
         this.moveToTile(nextTile);
       }
     } else {

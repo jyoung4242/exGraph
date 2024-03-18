@@ -3,8 +3,8 @@
 
 import "./style.css";
 import { UI } from "@peasy-lib/peasy-ui";
-import { Engine, DisplayMode, TileMap, ImageSource, SpriteSheet, Camera, Vector, Actor, EasingFunctions, Loader } from "excalibur";
-import { ExcaliburGraph, GraphTileMap } from "@excaliburjs/excalibur-graph";
+import { Engine, DisplayMode, TileMap, Vector, Loader } from "excalibur";
+import { ExcaliburAstar, ExcaliburGraph, GraphTileMap, aStarNode, GraphNode } from "@excaliburjs/excalibur-graph";
 import { Resources, rlSS } from "./resourcses";
 import { Tree, tiles } from "./tiledata";
 import { player } from "./player";
@@ -18,8 +18,23 @@ export const model = {
   targetTileIndex: 0,
   movesRemaining: 0,
   showHUD: false,
+
   showWarning: false,
   warningColor: "white",
+  warningText: "CLICKING A TREE WILL BE IGNORED",
+  inputDiagonal: undefined as HTMLInputElement | undefined,
+  inputAlgo: undefined as HTMLInputElement | undefined,
+  algoDuration: "0.0",
+  diagClicked: () => {
+    myDijkstraGraph.resetGraph();
+    if (model.inputDiagonal) {
+      if (model.inputDiagonal.checked) {
+        myDijkstraGraph.addTileMap(myGraphTileMap, true);
+      } else {
+        myDijkstraGraph.addTileMap(myGraphTileMap);
+      }
+    }
+  },
 };
 
 // dom template with bindings
@@ -48,8 +63,8 @@ const template = `
         gap: 10px;
         pointer-events: none;
     }
-    #current, #target, #remaining {
-        font-size: 30px;
+    #current, #target, #remaining, #duration {
+        font-size: 20px;
         margin: 5px;
     }
     #target {
@@ -66,6 +81,35 @@ const template = `
         transform: translateX(-50%);
         pointer-events: none;
       }
+
+      hud-input {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        pointer-events: auto;
+        position: fixed;
+        bottom: 5px;
+        left: 5px;
+        border: 2px solid white;
+        border-radius: 10px;
+        wrap-text: true;
+        width: 15%;
+      }
+
+      hud-instructions {
+        text-align: center;
+        display: flex; 
+        flex-direction: column;
+        gap: 10px;
+        pointer-events: none;
+        position: fixed;
+        top: 20%;
+        left: 5px ;
+        width: 15%;
+        wrap-text: true;
+        border: 2px solid white;
+        border-radius: 10px;
+      }
 </style> 
 <div> 
     <canvas id='cnv'> </canvas> 
@@ -74,8 +118,23 @@ const template = `
           <div id='current' \${===showHUD}>Current Tile: \${currentTileIndex} </div>
           <div id='target' \${===showHUD}>Target Tile: \${targetTileIndex} </div>
           <div id='remaining' \${===showHUD}>Moves Remaining: \${movesRemaining} </div>
+          <div id='duration' \${===showHUD}>Algo Duration: \${algoDuration}ms </div>
         </hud-flex>
-        <div id='warning' \${===showWarning}>CLICKING A TREE WILL BE IGNORED</div>
+        <hud-input \${===showHUD}>
+          <label for='inputAlgo'>Choose Algorithm</label>
+          <select id='inputAlgo' \${==>inputAlgo}>
+            <option value='astar'>A*</option>
+            <option value='dijkstra'>Dijkstra</option>
+          </select> 
+          <label for='inputDiagonal'>Allow Diagonals</label>
+          <input id='inputDiagonal' type='checkbox' \${click@=>diagClicked} \${==>inputDiagonal}> </input>
+        </hud-input>
+        
+        <hud-instructions \${===showHUD}>
+          <label>Instructions</label>
+          <p>Click on an open tile to move to it</p>  
+        </hud-instructions>
+        <div id='warning' \${===showWarning}>\${warningText}</div>
     </hud-layer>
     
 </div>`;
@@ -111,21 +170,25 @@ for (let tile of tilemap.tiles) {
     tile.addGraphic(rlSS.getSprite(tiles[0].sprite[0], tiles[0].sprite[1]));
     if (tiles[tileIndex] instanceof Tree) {
       tile.addGraphic(sprite);
+      tile.solid = true;
     }
   }
   tileIndex++;
 }
 
-// create graph
+// create graph for dijkstra
 // configure graph tilemap size and pass in tiles
-let myGraph = new ExcaliburGraph();
+let myDijkstraGraph = new ExcaliburGraph();
 let myGraphTileMap: GraphTileMap = {
   name: "myGraph",
   tiles: [...tiles],
   rows: 10,
   cols: 10,
 };
-myGraph.addTileMap(myGraphTileMap);
+myDijkstraGraph.addTileMap(myGraphTileMap);
+
+// create astar instance
+let myGraph = new ExcaliburAstar(tilemap);
 
 // start game, add tilemap, and actor
 await game.start(loader);
@@ -151,6 +214,7 @@ game.input.pointers.primary.on("down", evt => {
 
   // gaurd condition
   if (tiles[model.targetTileIndex] instanceof Tree) {
+    model.warningText = "CLICKING A TREE WILL BE IGNORED";
     showWarning();
     return;
   }
@@ -161,14 +225,41 @@ game.input.pointers.primary.on("down", evt => {
   if (playerTile) playerTileIndex = playerTile.x + playerTile.y * 10;
   let targetTileIndex = 0;
   if (tile) targetTileIndex = tile.x + tile.y * 10;
-  const path = myGraph.shortestPath(myGraph.nodes.get(`${playerTileIndex}`)!, myGraph.nodes.get(`${targetTileIndex}`)!);
+  // const path = myGraph.shortestPath(myGraph.nodes.get(`${playerTileIndex}`)!, myGraph.nodes.get(`${targetTileIndex}`)!);
+  const letDiag = model.inputDiagonal?.checked ? true : false;
 
-  // set the HUD data for moves remaining
-  model.movesRemaining = path.length - 1;
+  // pick which algorithm
+  let startingIndex = 0;
+  let path: GraphNode[] | aStarNode[] = [];
+
+  if (model.inputAlgo?.value == "dijkstra") {
+    path = myDijkstraGraph.shortestPath(
+      myDijkstraGraph.nodes.get(`${playerTileIndex}`)!,
+      myDijkstraGraph.nodes.get(`${targetTileIndex}`)!
+    );
+
+    model.algoDuration = myDijkstraGraph.duration.toFixed(3);
+    model.movesRemaining = path.length - 1;
+    startingIndex = 1;
+    if (path.length == 1 && startingIndex == 1) {
+      model.warningText = "UNREACHABLE TILE";
+      showWarning();
+    }
+  } else if (model.inputAlgo?.value == "astar") {
+    path = myGraph.astar(myGraph.getNodeByIndex(playerTileIndex), myGraph.getNodeByIndex(targetTileIndex), letDiag);
+
+    model.algoDuration = myGraph.duration.toFixed(3);
+    model.movesRemaining = path.length;
+    if (path.length == 0) {
+      model.warningText = "UNREACHABLE TILE";
+      showWarning();
+    }
+  }
+
   // don't push the player's current tile, so we start at index 1
-  for (let i = 1; i < path.length; i++) {
+  for (let i = startingIndex; i < path.length; i++) {
     const nxtPath = path[i];
-    player.playerActionBuffer.push(parseInt(nxtPath.name));
+    player.playerActionBuffer.push(parseInt(nxtPath.id.toString()));
   }
 });
 
