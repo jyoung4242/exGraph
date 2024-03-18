@@ -44,6 +44,11 @@
             <li><a href="#importing-tilemap">Tilemap</a></li>
           </ul>
         </li>
+        <li><a href="#usage-of-the-a-star-module">A* module</a>
+          <ul>
+            <li><a href="#importing-tilemap-for-a-star">Tilemap</a></li>
+          </ul>
+        </li>
       </ul>
     </li>
     <li><a href="#contact">Contact</a></li>
@@ -358,13 +363,45 @@ tilemap.tiles = [
 ];
 ```
 
-4 Pass the tilemap to the Graph, and it will create your nodes and edges automatically
+4 Pass the tilemap to the Graph, and it will create your nodes and edges automatically, there is a 2nd parameter associated with this,
+if you want diagonal tiles to be included in the relationships and edges created, pass a true as the second parameter.
 
 ```ts
-tilemapAdjacencyList.addTileMap(tilemap);
+tilemapAdjacencyList.addTileMap(tilemap, true); // 2nd parameter defaults to false
 ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+## Usage of the A star module
+
+The A star module simply imports a tilemap object, parses it, then exposes a method `astar()` that returns an array of nodes.
+
+### Importing Tilemap For A Star
+
+The A\* module in this package is tailored to use with the Excalibur Tilemap resource. You can create your TileMap object, set up the
+tiles, then pass it to the ExcaliburAstar() method.
+
+```ts
+// Create a tilemap
+const tilemap = new TileMap({
+  rows: 10,
+  columns: 10,
+  tileWidth: 16,
+  tileHeight: 16,
+});
+
+// create astar instance
+let myGraph = new ExcaliburAstar(tilemap);
+```
+
+After the tilemap is parsed, as needed, you can call the astar() method, and the shortest path will be returned between the starting
+node and ending node. TAKE NOTE\*\*\*\* path will NOT include the starting path. If you want to traverse paths using diagonals, then
+pass a true to the final paramater, which defaults to false.
+
+```ts
+path = myGraph.astar(myGraph.getNodeByIndex(playerTileIndex), myGraph.getNodeByIndex(targetTileIndex), letDiag);
+```
+
 <!-- CONTACT -->
 
 ## Contact
